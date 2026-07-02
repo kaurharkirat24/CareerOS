@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, Phone, Link as LinkIcon, FileText, Save, Loader2 } from "lucide-react";
 import api from "@/lib/api";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 export default function Profile() {
@@ -39,9 +40,9 @@ export default function Profile() {
         full_name: fullName,
         resume_text: resumeText
       });
-      alert("Profile saved successfully!");
+      toast.success("Profile saved successfully!");
     } catch (err) {
-      alert("Failed to save profile.");
+      toast.error("Failed to save profile.");
     } finally {
       setSaving(false);
     }

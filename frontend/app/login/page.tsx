@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,6 +23,8 @@ export default function Login() {
         
         const res = await api.post("/auth/token", formData);
         localStorage.setItem("token", res.data.access_token);
+        toast.success("Successfully logged in!");
+        router.push("/");
       } else {
         const res = await api.post("/auth/register", {
           email,
@@ -29,10 +32,11 @@ export default function Login() {
           full_name: fullName
         });
         localStorage.setItem("token", res.data.access_token);
+        toast.success("Account created successfully!");
+        router.push("/profile");
       }
-      router.push("/");
     } catch (err) {
-      alert("Authentication failed! Check your credentials.");
+      toast.error(isLogin ? "Authentication failed! Check your credentials." : "Failed to create account. User might already exist.");
       console.error(err);
     }
   };

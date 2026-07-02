@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { Home, Briefcase, FileText, Settings, User } from "lucide-react";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <Toaster position="top-right" />
         <div className="flex min-h-screen bg-slate-50/50">
           {/* Sidebar */}
           <aside className="w-64 glass fixed h-full border-r border-slate-200 p-6 flex flex-col justify-between hidden md:flex">

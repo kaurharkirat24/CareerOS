@@ -9,8 +9,10 @@ from backend.api.auth import get_current_user
 from backend.agents.job_crawlers.linkedin_crawler import LinkedInCrawler
 from backend.agents.job_crawlers.indeed_crawler import IndeedCrawler
 from backend.graph.pipeline import application_pipeline, JobApplicationState
+from backend.core.logger import get_logger
 
 router = APIRouter()
+logger = get_logger("jobs_api")
 
 class ScrapeRequest(BaseModel):
     keyword: str
@@ -23,30 +25,34 @@ async def scrape_jobs(req: ScrapeRequest, db: Session = Depends(get_session), cu
     linkedin = LinkedInCrawler()
     indeed = IndeedCrawler()
     
-    scraped_linkedin = await linkedin.crawl(req.keyword, req.location, req.max_results)
-    scraped_indeed = await indeed.crawl(req.keyword, req.location, req.max_results)
-    
-    all_scraped = scraped_linkedin + scraped_indeed
-    saved_jobs = []
-    
-    for job_data in all_scraped:
-        # Check if job already exists
-        existing = db.exec(select(Job).where(Job.url == job_data.url)).first()
-        if not existing:
-            new_job = Job(
-                title=job_data.title,
-                company=job_data.company,
-                location=job_data.location,
-                url=job_data.url,
-                description=job_data.description,
-                source=job_data.source
-            )
-            db.add(new_job)
-            db.commit()
-            db.refresh(new_job)
-            saved_jobs.append(new_job)
-            
-    return {"message": f"Successfully scraped and saved {len(saved_jobs)} new jobs.", "jobs": saved_jobs}
+    try:
+        scraped_linkedin = await linkedin.crawl(req.keyword, req.location, req.max_results)
+        scraped_indeed = await indeed.crawl(req.keyword, req.location, req.max_results)
+        
+        all_scraped = scraped_linkedin + scraped_indeed
+        saved_jobs = []
+        
+        for job_data in all_scraped:
+            existing = db.exec(select(Job).where(Job.url == job_data.url)).first()
+            if not existing:
+                new_job = Job(
+                    title=job_data.title,
+                    company=job_data.company,
+                    location=job_data.location,
+                    url=job_data.url,
+                    description=job_data.description,
+                    source=job_data.source
+                )
+                db.add(new_job)
+                db.commit()
+                db.refresh(new_job)
+                saved_jobs.append(new_job)
+                
+        logger.info(f"Scraped and saved {len(saved_jobs)} new jobs for keyword: {req.keyword}")
+        return {"message": f"Successfully scraped and saved {len(saved_jobs)} new jobs.", "jobs": saved_jobs}
+    except Exception as e:
+        logger.error(f"Error during job scraping: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while scraping jobs. Please check server logs.")
 
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
@@ -132,5 +138,5 @@ async def apply_to_job(job_id: int, db: Session = Depends(get_session), current_
         }
         
     except Exception as e:
-        print(f"Error in pipeline: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in application pipeline for job {job_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred during the application automation. Please check server logs.")

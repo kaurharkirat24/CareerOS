@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Briefcase, Building, MapPin, Search, PlayCircle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 interface Job {
   id: number;
@@ -43,10 +44,10 @@ export default function JobsTracker() {
         location: "Remote",
         max_results: 3
       });
-      alert(res.data.message);
+      toast.success(res.data.message);
       fetchJobs();
     } catch (err) {
-      alert("Failed to scrape jobs.");
+      toast.error("Failed to scrape jobs.");
     } finally {
       setScraping(false);
     }
@@ -56,9 +57,9 @@ export default function JobsTracker() {
     setApplyingId(jobId);
     try {
       const res = await api.post(`/jobs/${jobId}/apply`);
-      alert(`Automation Complete! Status: ${res.data.status}`);
+      toast.success(`Automation Complete! Status: ${res.data.status}`);
     } catch (err: any) {
-      alert(`Application failed: ${err.response?.data?.detail || err.message}`);
+      toast.error(`Application failed: ${err.response?.data?.detail || err.message}`);
     } finally {
       setApplyingId(null);
     }
