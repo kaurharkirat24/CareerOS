@@ -33,8 +33,13 @@ class ResumeAgent:
     def optimize(self, job_description: str, user_profile: str) -> OptimizedResume:
         prompt = f"""
         You are an expert ATS Resume Optimizer.
-        Rewrite the user's profile to perfectly match the provided Job Description without hallucinating fake experience.
-        Highlight relevant projects, rephrase bullet points to emphasize keywords from the JD, and ensure the summary reflects the role.
+        Your task is to tailor the user's profile to perfectly match the provided Job Description.
+        
+        CRITICAL RULES:
+        1. DO NOT change factual information: Name, email, phone, links, company names, job titles, employment dates, education degrees, or schools must remain EXACTLY as provided.
+        2. DO NOT hallucinate or invent skills, tools, or experiences the user does not have.
+        3. YOU MAY rephrase the professional summary to align with the role's focus.
+        4. YOU MAY reorder, emphasize, or rephrase the bullet points in experience and projects to highlight keywords from the JD, while keeping the underlying achievements authentic.
         
         Job Description:
         {job_description}
