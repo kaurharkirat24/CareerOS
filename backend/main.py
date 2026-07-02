@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.session import create_db_and_tables
-from backend.api import auth
+from backend.api import auth, jobs, profile
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,3 +28,5 @@ def read_root():
 
 # Add routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(profile.router, prefix="/api/profile", tags=["profile"])

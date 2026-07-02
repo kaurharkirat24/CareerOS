@@ -1,116 +1,116 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Briefcase, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
+import { Briefcase, FileText, Send, XCircle, Trophy, BarChart3, Loader2 } from "lucide-react";
+import api from "@/lib/api";
 
-export default function Dashboard() {
-  const stats = [
-    { title: "Jobs Applied", value: "24", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-100" },
-    { title: "Interviews", value: "3", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-100" },
-    { title: "Pending", value: "15", icon: Clock, color: "text-amber-600", bg: "bg-amber-100" },
-    { title: "Rejected", value: "6", icon: XCircle, color: "text-rose-600", bg: "bg-rose-100" },
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
+export default function Home() {
+  const [stats, setStats] = useState({
+    Total: 0,
+    Pending: 0,
+    Applied: 0,
+    Rejected: 0,
+    Interview: 0,
+    Offer: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/jobs/stats");
+        setStats(res.data);
+      } catch (err) {
+        console.error("Failed to fetch stats", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const statCards = [
+    { title: "Total Scraped", value: stats.Total.toString(), icon: Briefcase, color: "text-blue-500", bg: "bg-blue-50" },
+    { title: "Applications Sent", value: stats.Applied.toString(), icon: Send, color: "text-indigo-500", bg: "bg-indigo-50" },
+    { title: "Pending", value: stats.Pending.toString(), icon: FileText, color: "text-amber-500", bg: "bg-amber-50" },
+    { title: "Interviews", value: stats.Interview.toString(), icon: BarChart3, color: "text-emerald-500", bg: "bg-emerald-50" },
+    { title: "Offers", value: stats.Offer.toString(), icon: Trophy, color: "text-yellow-500", bg: "bg-yellow-50" },
+    { title: "Rejected", value: stats.Rejected.toString(), icon: XCircle, color: "text-rose-500", bg: "bg-rose-50" },
   ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Welcome back, Harkirat!</h1>
-          <p className="text-slate-500 mt-1">Here is what your AI Agent has been up to.</p>
-        </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm shadow-indigo-200">
-          Start Auto-Apply
-        </button>
+      <header>
+        <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+        <p className="text-slate-500 mt-1">Welcome back. Here is your AI application overview.</p>
       </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            key={stat.title} 
-            className="glass rounded-2xl p-6 flex items-center gap-4 hover:-translate-y-1 transition-all-ease cursor-default"
-          >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-slate-800">{stat.value}</h3>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center items-center h-64 text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading stats...
+        </div>
+      ) : (
+        <motion.div 
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {statCards.map((stat, idx) => (
+            <motion.div key={idx} variants={item} className="glass p-6 rounded-2xl flex items-start gap-4">
+              <div className={`p-3 rounded-xl ${stat.bg}`}>
+                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</h3>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Applications */}
-        <div className="lg:col-span-2 glass rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-slate-800">Recent Applications</h2>
-            <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">View All</button>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="glass rounded-2xl p-8 mt-8"
+      >
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Recent Activity</h2>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50/50 transition border border-transparent hover:border-slate-100">
+            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+            <p className="text-sm text-slate-600 flex-1">AI Agent successfully submitted application to <span className="font-semibold text-slate-800">Google</span></p>
+            <span className="text-xs text-slate-400 font-medium">Just now</span>
           </div>
-          
-          <div className="space-y-4">
-            {[
-              { role: "Backend Engineer", company: "Google", status: "Applied", time: "2 hours ago" },
-              { role: "AI Software Engineer", company: "OpenAI", status: "Interview", time: "1 day ago" },
-              { role: "Full Stack Developer", company: "Stripe", status: "Applied", time: "2 days ago" },
-            ].map((app, i) => (
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + (i * 0.1) }}
-                key={i} 
-                className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-colors"
-              >
-                <div>
-                  <h4 className="font-bold text-slate-800">{app.role}</h4>
-                  <p className="text-sm text-slate-500">{app.company}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                    ${app.status === 'Applied' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                    {app.status}
-                  </span>
-                  <p className="text-xs text-slate-400 mt-1">{app.time}</p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50/50 transition border border-transparent hover:border-slate-100">
+            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <p className="text-sm text-slate-600 flex-1">Scraper found <span className="font-semibold text-slate-800">14 new jobs</span> matching your criteria</p>
+            <span className="text-xs text-slate-400 font-medium">2h ago</span>
+          </div>
+          <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50/50 transition border border-transparent hover:border-slate-100">
+            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+            <p className="text-sm text-slate-600 flex-1">Resume Agent updated your profile for <span className="font-semibold text-slate-800">Senior AI Engineer</span></p>
+            <span className="text-xs text-slate-400 font-medium">5h ago</span>
           </div>
         </div>
-
-        {/* Analytics Card */}
-        <div className="glass rounded-2xl p-6">
-          <h2 className="text-xl font-bold text-slate-800 mb-6">Match Analytics</h2>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-slate-600">Average Match Score</span>
-                <span className="font-bold text-emerald-600">86%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '86%' }}></div>
-              </div>
-            </div>
-            
-            <div className="pt-4 border-t border-slate-100">
-              <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-indigo-500"/> Top Missing Skills
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">Kubernetes</span>
-                <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">AWS</span>
-                <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">Terraform</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-3">
-                Learning <strong className="text-indigo-600">Kubernetes</strong> would unlock 32% more jobs.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
