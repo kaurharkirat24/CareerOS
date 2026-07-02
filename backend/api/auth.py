@@ -22,7 +22,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_session)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_session)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

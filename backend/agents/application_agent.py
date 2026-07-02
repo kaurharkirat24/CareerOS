@@ -78,4 +78,7 @@ class ApplicationAgent:
                 print(f"Application failed for {job_url}: {e}")
                 return False
             finally:
-                await context.close()
+                if context.browser:
+                    await context.browser.close()
+                else:
+                    await context.close()

@@ -66,6 +66,9 @@ class IndeedCrawler(BaseCrawler):
             except Exception as e:
                 print(f"Failed to crawl Indeed: {e}")
             finally:
-                await context.close()
+                if context.browser:
+                    await context.browser.close()
+                else:
+                    await context.close()
                 
         return jobs
