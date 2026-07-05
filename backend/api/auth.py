@@ -2,11 +2,17 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import Session, select
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from backend.db.session import get_session
 from backend.db.models import User
-from backend.core.security import verify_password, get_password_hash, create_access_token
+from backend.core.security import (
+    BCRYPT_MAX_PASSWORD_BYTES,
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    is_password_too_long,
+)
 from backend.core.config import settings
 from jose import JWTError, jwt
 
@@ -17,6 +23,13 @@ class UserCreate(BaseModel):
     email: str
     password: str
     full_name: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def password_must_fit_bcrypt(cls, password: str) -> str:
+        if is_password_too_long(password):
+            raise ValueError(f"Password cannot be longer than {BCRYPT_MAX_PASSWORD_BYTES} bytes")
+        return password
 
 class Token(BaseModel):
     access_token: str

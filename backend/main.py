@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import create_db_and_tables
 from backend.api import auth, jobs, profile
 from backend.core.logger import get_logger
+from backend.core.config import settings
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 
@@ -20,18 +21,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Job Search Agent API", lifespan=lifespan)
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled Exception on {request.method} {request.url}: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected internal server error occurred. Please try again later."},
-    )
+@app.middleware("http")
+async def log_unhandled_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        logger.error(f"Unhandled Exception on {request.method} {request.url}: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "An unexpected internal server error occurred. Please try again later."},
+        )
 
 # Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Update for production
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
