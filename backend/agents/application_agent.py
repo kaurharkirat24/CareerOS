@@ -17,11 +17,12 @@ class ApplicationData(BaseModel):
 class ApplicationAgent:
     """Agent responsible for navigating application forms and submitting them."""
     
-    async def apply(self, job_url: str, app_data: ApplicationData) -> bool:
+    async def apply(self, job_url: str, app_data: ApplicationData, *, submit: bool = False) -> bool:
         """
         Attempts to apply to a job URL. 
         Note: True robustness requires handling dozens of ATS providers (Greenhouse, Lever, Workday).
         This is a generic baseline implementation focusing on standard inputs.
+        If submit is False, the agent stops when the form appears ready for final submission.
         """
         async with async_playwright() as p:
             context = await PlaywrightHelper.create_browser_context(p, headless=False) # Headless=False for debugging/visibility
@@ -65,11 +66,15 @@ class ApplicationAgent:
                 if app_data.linkedin and await linkedin_input.count() > 0:
                     await PlaywrightHelper.human_type(page, 'input[name*="linkedin"], input[name*="url"]', app_data.linkedin)
                     
-                # 7. Submit (We don't actually click submit in the MVP to avoid accidental spam, just locate it)
+                # 7. Submit. In review mode, stop once the form appears ready.
                 submit_btn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Submit Application")')
                 if await submit_btn.count() > 0:
-                    print("Found submit button. Ready to apply.")
-                    # In a real run: await submit_btn.click()
+                    if submit:
+                        await submit_btn.first.click()
+                        await PlaywrightHelper.human_delay(2000, 4000)
+                        print("Submit button clicked.")
+                    else:
+                        print("Found submit button. Ready for user-approved submission.")
                     return True
                     
                 return False

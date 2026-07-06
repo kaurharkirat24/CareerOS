@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CareerOS Frontend
 
-## Getting Started
+This is the Vite React frontend for CareerOS.
 
-First, run the development server:
+## Stack
 
-```bash
+- Vite
+- React
+- TypeScript
+- React Router
+- Axios
+- Lucide React icons
+- Framer Motion
+- React Hot Toast
+
+## Scripts
+
+```powershell
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm.cmd run build
+npm run lint
+npm run preview
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Use `npm.cmd` on Windows if PowerShell blocks `npm.ps1`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API URL
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The API client defaults to:
 
-## Learn More
+```text
+http://127.0.0.1:8000/api
+```
 
-To learn more about Next.js, take a look at the following resources:
+Override it with `frontend/.env` when needed:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Main Files
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+src/lib/api.ts                 Axios API client and auth token interceptor
+src/context/AuthContext.tsx    Login, registration, logout, session hydration
+src/context/JobsContext.tsx    Jobs, stats, scraping, and auto-apply state
+src/pages/Login.tsx            Sign-in and registration screen
+src/pages/Dashboard.tsx        Application stats overview
+src/pages/Jobs.tsx             Job scraper and tracker UI
+src/pages/Profile.tsx          Profile and base resume editor
+```

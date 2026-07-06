@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 from langgraph.graph import StateGraph, END
 from backend.agents.matching_agent import MatchingAgent
 from backend.agents.resume_agent import ResumeAgent
@@ -16,11 +16,16 @@ class JobApplicationState(TypedDict):
     job_description: str
     company: str
     role_title: str
+    auto_submit: bool  # If False, stops after prepare. If True, runs full pipeline.
     
     # Agent Outcomes
     match_score: Optional[int]
+    match_explanation: Optional[str]
+    matching_skills: Optional[List[str]]
+    missing_skills: Optional[List[str]]
     should_apply: Optional[bool]
     reason_skipped: Optional[str]
+    tailored_resume_text: Optional[str]
     resume_path: Optional[str]
     cover_letter: Optional[str]
     application_success: Optional[bool]
@@ -30,6 +35,9 @@ def match_node(state: JobApplicationState):
     result = agent.analyze(state["job_description"], state["user_profile"])
     return {
         "match_score": result.match_score,
+        "match_explanation": result.fit_analysis,
+        "matching_skills": result.matching_skills,
+        "missing_skills": result.missing_skills,
         "should_apply": result.should_apply,
         "reason_skipped": result.reason_skipped
     }
@@ -56,6 +64,7 @@ async def prepare_node(state: JobApplicationState):
     )
     
     return {
+        "tailored_resume_text": optimized_resume.model_dump_json(indent=2),
         "resume_path": pdf_path,
         "cover_letter": cover_letter
     }
@@ -74,7 +83,7 @@ async def apply_node(state: JobApplicationState):
         github=state["user_data"].get("github")
     )
     
-    success = await app_agent.apply(state["job_url"], app_data)
+    success = await app_agent.apply(state["job_url"], app_data, submit=state.get("auto_submit") is True)
     
     return {
         "application_success": success
@@ -85,6 +94,13 @@ def check_match_score(state: JobApplicationState):
     if state.get("should_apply") is True:
         return "prepare"
     return END
+
+def check_auto_submit(state: JobApplicationState):
+    """After prepare, only proceed to apply if auto_submit is True."""
+    if state.get("auto_submit") is True:
+        return "apply"
+    return END
+
 
 # Build the LangGraph Workflow
 workflow = StateGraph(JobApplicationState)
@@ -104,7 +120,15 @@ workflow.add_conditional_edges(
     }
 )
 
-workflow.add_edge("prepare", "apply")
+workflow.add_conditional_edges(
+    "prepare",
+    check_auto_submit,
+    {
+        "apply": "apply",
+        END: END,
+    }
+)
+
 workflow.add_edge("apply", END)
 
 application_pipeline = workflow.compile()
