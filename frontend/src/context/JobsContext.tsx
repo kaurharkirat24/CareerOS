@@ -2,6 +2,12 @@ import { createContext, useContext, useReducer, ReactNode, useCallback } from 'r
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
+export interface JobApplication {
+  id: number;
+  status: string;
+  match_score: number | null;
+}
+
 export interface Job {
   id: number;
   title: string;
@@ -10,6 +16,9 @@ export interface Job {
   source: string;
   url: string;
   description: string;
+  salary: string | null;
+  experience_level: string | null;
+  application: JobApplication | null;
 }
 
 interface Stats {
@@ -133,9 +142,13 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_APPLYING', payload: jobId });
     try {
       const res = await api.post(`/jobs/${jobId}/apply`);
-      toast.success(`Automation Complete! Status: ${res.data.status}`);
-      // Refresh stats after applying
-      const statsRes = await api.get('/jobs/stats');
+      toast.success(res.data.message || 'Preparation complete. Review before submitting.');
+      // Refresh both jobs (for status badge) and stats
+      const [jobsRes, statsRes] = await Promise.all([
+        api.get('/jobs/'),
+        api.get('/jobs/stats'),
+      ]);
+      dispatch({ type: 'SET_JOBS', payload: jobsRes.data });
       dispatch({ type: 'SET_STATS', payload: statsRes.data });
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Application automation failed.';

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Briefcase,
@@ -8,12 +9,26 @@ import {
   PlayCircle,
   Loader2,
   ExternalLink,
+  ChevronRight,
 } from 'lucide-react';
 import { useJobs, Job } from '../context/JobsContext';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   show: { opacity: 1, y: 0, scale: 1 },
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  Draft: 'var(--text-muted)',
+  Pending: 'var(--accent-amber)',
+  Ready: 'var(--accent-cyan)',
+  Applied: 'var(--accent-emerald)',
+  Failed: 'var(--accent-rose)',
+  Skipped: 'var(--text-muted)',
+  'Needs Review': 'var(--accent-amber)',
+  Rejected: 'var(--accent-rose)',
+  Interview: 'var(--accent-indigo)',
+  Offer: 'var(--accent-cyan)',
 };
 
 export default function Jobs() {
@@ -115,52 +130,73 @@ export default function Jobs() {
         >
           {jobs.map((job: Job) => (
             <motion.div key={job.id} variants={cardVariants} className="glass-card job-card">
-              <div className="job-card-header">
-                <div>
-                  <div className="job-title">{job.title}</div>
-                  <div className="job-company">
-                    <Building size={14} />
-                    {job.company}
+              <Link to={`/jobs/${job.id}`} className="job-card-link">
+                <div className="job-card-header">
+                  <div>
+                    <div className="job-title">{job.title}</div>
+                    <div className="job-company">
+                      <Building size={14} />
+                      {job.company}
+                    </div>
+                  </div>
+                  <div className="flex-col gap-sm" style={{ alignItems: 'flex-end' }}>
+                    <span className="source-badge">{job.source}</span>
+                    {job.application && (
+                      <span
+                        className="status-badge"
+                        style={{ '--badge-color': STATUS_COLORS[job.application.status] || 'var(--text-muted)' } as React.CSSProperties}
+                      >
+                        {job.application.status}
+                        {job.application.match_score !== null && ` · ${job.application.match_score}%`}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <span className="source-badge">{job.source}</span>
-              </div>
 
-              <div className="job-meta">
-                <span className="job-meta-item">
-                  <MapPin size={14} />
-                  {job.location || 'Remote'}
-                </span>
+                <div className="job-meta">
+                  <span className="job-meta-item">
+                    <MapPin size={14} />
+                    {job.location || 'Remote'}
+                  </span>
+                  <span className="job-meta-item" style={{ marginLeft: 'auto', color: 'var(--accent-indigo)' }}>
+                    View Details <ChevronRight size={14} />
+                  </span>
+                </div>
+              </Link>
+
+              <div className="job-card-actions">
                 {job.url && (
                   <a
                     href={job.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="job-meta-item"
-                    style={{ color: 'var(--accent-indigo)', cursor: 'pointer' }}
+                    className="btn-ghost"
+                    style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <ExternalLink size={14} />
-                    View Posting
+                    <ExternalLink size={13} />
+                    Posting
                   </a>
                 )}
-              </div>
-
-              <div className="job-card-actions">
                 <button
-                  onClick={() => applyToJob(job.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    applyToJob(job.id);
+                  }}
                   disabled={applyingJobId === job.id}
                   className="btn-primary"
-                  style={{ fontSize: '0.8rem', padding: '8px 16px' }}
+                  style={{ fontSize: '0.78rem', padding: '6px 14px' }}
                 >
                   {applyingJobId === job.id ? (
                     <>
-                      <Loader2 className="spinner" size={14} />
-                      Running AI...
+                      <Loader2 className="spinner" size={13} />
+                      Preparing...
                     </>
                   ) : (
                     <>
-                      <PlayCircle size={14} />
-                      Auto Apply
+                      <PlayCircle size={13} />
+                      Prepare
                     </>
                   )}
                 </button>

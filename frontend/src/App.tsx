@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Jobs from './pages/Jobs';
+import JobDetail from './pages/JobDetail';
 import Profile from './pages/Profile';
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/jobs" element={<Jobs />} />
+              <Route path="/jobs/:jobId" element={<JobDetail />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
             {/* Catch-all: redirect to dashboard */}
