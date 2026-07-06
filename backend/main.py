@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.session import create_db_and_tables
-from backend.api import auth, jobs, profile
+from backend.api import applications, auth, jobs, profile
 from backend.core.logger import get_logger
 from backend.core.config import settings
 from fastapi.responses import JSONResponse
@@ -50,3 +50,4 @@ def read_root():
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
+app.include_router(applications.router, prefix="/api/applications", tags=["applications"])
