@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 from langgraph.graph import StateGraph, END
 from backend.agents.matching_agent import MatchingAgent
 from backend.agents.resume_agent import ResumeAgent
@@ -19,8 +19,12 @@ class JobApplicationState(TypedDict):
     
     # Agent Outcomes
     match_score: Optional[int]
+    match_explanation: Optional[str]
+    matching_skills: Optional[List[str]]
+    missing_skills: Optional[List[str]]
     should_apply: Optional[bool]
     reason_skipped: Optional[str]
+    tailored_resume_text: Optional[str]
     resume_path: Optional[str]
     cover_letter: Optional[str]
     application_success: Optional[bool]
@@ -30,6 +34,9 @@ def match_node(state: JobApplicationState):
     result = agent.analyze(state["job_description"], state["user_profile"])
     return {
         "match_score": result.match_score,
+        "match_explanation": result.fit_analysis,
+        "matching_skills": result.matching_skills,
+        "missing_skills": result.missing_skills,
         "should_apply": result.should_apply,
         "reason_skipped": result.reason_skipped
     }
@@ -56,6 +63,7 @@ async def prepare_node(state: JobApplicationState):
     )
     
     return {
+        "tailored_resume_text": optimized_resume.model_dump_json(indent=2),
         "resume_path": pdf_path,
         "cover_letter": cover_letter
     }

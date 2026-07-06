@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from typing import List, Dict, Any
+from typing import List
 from pydantic import BaseModel
 
 from backend.db.session import get_session
@@ -10,6 +10,13 @@ from backend.agents.job_crawlers.linkedin_crawler import LinkedInCrawler
 from backend.agents.job_crawlers.indeed_crawler import IndeedCrawler
 from backend.graph.pipeline import application_pipeline, JobApplicationState
 from backend.core.logger import get_logger
+from backend.services.application_tracking import (
+    ApplicationEventType,
+    ApplicationStatus,
+    record_application_event,
+    update_application_status,
+    upsert_application_artifact,
+)
 
 router = APIRouter()
 logger = get_logger("jobs_api")
@@ -61,8 +68,13 @@ def get_stats(db: Session = Depends(get_session), current_user: User = Depends(g
     
     stats = {
         "Total": len(apps),
+        "Draft": 0,
         "Pending": 0,
+        "Ready": 0,
         "Applied": 0,
+        "Failed": 0,
+        "Skipped": 0,
+        "Needs Review": 0,
         "Rejected": 0,
         "Interview": 0,
         "Offer": 0
@@ -89,7 +101,35 @@ async def apply_to_job(job_id: int, db: Session = Depends(get_session), current_
         
     if not current_user.resume_text:
         raise HTTPException(status_code=400, detail="User profile/resume text is missing. Please update your profile first.")
-        
+
+    app = Application(
+        user_id=current_user.id,
+        job_id=job.id,
+        status=ApplicationStatus.DRAFT,
+        stage=ApplicationStatus.DRAFT,
+        source_url=job.url,
+    )
+    db.add(app)
+    db.commit()
+    db.refresh(app)
+
+    record_application_event(
+        db,
+        app,
+        event_type=ApplicationEventType.CREATED,
+        status=ApplicationStatus.DRAFT,
+        message="Application record created.",
+        metadata={"job_id": job.id, "job_url": job.url, "source": job.source},
+    )
+    update_application_status(
+        db,
+        app,
+        ApplicationStatus.PENDING,
+        stage="Automation Started",
+        event_type=ApplicationEventType.AUTOMATION_STARTED,
+        message="Application automation started.",
+    )
+
     # Setup initial state for LangGraph
     initial_state = JobApplicationState(
         user_id=current_user.id,
@@ -105,8 +145,12 @@ async def apply_to_job(job_id: int, db: Session = Depends(get_session), current_
         company=job.company,
         role_title=job.title,
         match_score=None,
+        match_explanation=None,
+        matching_skills=None,
+        missing_skills=None,
         should_apply=None,
         reason_skipped=None,
+        tailored_resume_text=None,
         resume_path=None,
         cover_letter=None,
         application_success=None
@@ -116,22 +160,90 @@ async def apply_to_job(job_id: int, db: Session = Depends(get_session), current_
     # Using ainvoke for async execution
     try:
         final_state = await application_pipeline.ainvoke(initial_state)
-        
-        # Save application status
-        status = "Applied" if final_state.get("application_success") else ("Skipped" if not final_state.get("should_apply") else "Failed")
-        
-        app = Application(
-            user_id=current_user.id,
-            job_id=job.id,
-            status=status,
-            match_score=final_state.get("match_score")
-        )
+
+        app.match_score = final_state.get("match_score")
         db.add(app)
         db.commit()
         db.refresh(app)
+
+        if final_state.get("match_score") is not None:
+            record_application_event(
+                db,
+                app,
+                event_type=ApplicationEventType.MATCH_SCORED,
+                status=ApplicationStatus.PENDING,
+                message=f"Job match score calculated: {final_state.get('match_score')}%.",
+                metadata={
+                    "match_score": final_state.get("match_score"),
+                    "match_explanation": final_state.get("match_explanation"),
+                    "matching_skills": final_state.get("matching_skills"),
+                    "missing_skills": final_state.get("missing_skills"),
+                    "should_apply": final_state.get("should_apply"),
+                    "reason_skipped": final_state.get("reason_skipped"),
+                },
+            )
+
+        upsert_application_artifact(
+            db,
+            app,
+            tailored_resume_text=final_state.get("tailored_resume_text"),
+            resume_pdf_path=final_state.get("resume_path"),
+            cover_letter_text=final_state.get("cover_letter"),
+            match_explanation=final_state.get("match_explanation"),
+            matched_skills=final_state.get("matching_skills"),
+            missing_skills=final_state.get("missing_skills"),
+        )
+
+        if final_state.get("resume_path"):
+            record_application_event(
+                db,
+                app,
+                event_type=ApplicationEventType.RESUME_GENERATED,
+                status=ApplicationStatus.PENDING,
+                message="Tailored resume PDF generated.",
+                metadata={"resume_path": final_state.get("resume_path")},
+            )
+
+        if final_state.get("cover_letter"):
+            record_application_event(
+                db,
+                app,
+                event_type=ApplicationEventType.COVER_LETTER_GENERATED,
+                status=ApplicationStatus.PENDING,
+                message="Cover letter generated.",
+            )
+
+        # Save final application status
+        if final_state.get("application_success"):
+            status = ApplicationStatus.APPLIED
+            event_type = ApplicationEventType.SUBMITTED
+            reason = "Application submitted successfully."
+        elif final_state.get("should_apply") is False:
+            status = ApplicationStatus.SKIPPED
+            event_type = ApplicationEventType.SKIPPED
+            reason = final_state.get("reason_skipped") or "Application skipped by match analysis."
+        else:
+            status = ApplicationStatus.FAILED
+            event_type = ApplicationEventType.FAILED
+            reason = "Automation finished without confirming submission."
+
+        update_application_status(
+            db,
+            app,
+            status,
+            reason=reason,
+            event_type=event_type,
+            message=reason,
+            metadata={
+                "match_score": final_state.get("match_score"),
+                "should_apply": final_state.get("should_apply"),
+                "application_success": final_state.get("application_success"),
+            },
+        )
         
         return {
             "message": "Automation completed",
+            "application_id": app.id,
             "status": status,
             "match_score": final_state.get("match_score"),
             "reason_skipped": final_state.get("reason_skipped")
@@ -139,4 +251,13 @@ async def apply_to_job(job_id: int, db: Session = Depends(get_session), current_
         
     except Exception as e:
         logger.error(f"Error in application pipeline for job {job_id}: {e}", exc_info=True)
+        update_application_status(
+            db,
+            app,
+            ApplicationStatus.FAILED,
+            reason="Application automation failed. Please check server logs.",
+            event_type=ApplicationEventType.FAILED,
+            message="Application automation failed.",
+            metadata={"error": str(e), "job_id": job_id},
+        )
         raise HTTPException(status_code=500, detail="An error occurred during the application automation. Please check server logs.")
