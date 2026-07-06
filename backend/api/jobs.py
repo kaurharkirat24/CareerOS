@@ -10,6 +10,7 @@ from backend.agents.job_crawlers.indeed_crawler import IndeedCrawler
 from backend.agents.application_agent import ApplicationAgent, ApplicationData
 from backend.graph.pipeline import application_pipeline, JobApplicationState
 from backend.core.logger import get_logger
+from backend.services.authenticity import analyze_resume_authenticity
 from backend.services.application_tracking import (
     ApplicationEventType,
     ApplicationStatus,
@@ -235,6 +236,11 @@ async def apply_to_job(
                 },
             )
 
+        authenticity = analyze_resume_authenticity(
+            current_user.resume_text,
+            final_state.get("tailored_resume_text"),
+        )
+
         upsert_application_artifact(
             db, app,
             tailored_resume_text=final_state.get("tailored_resume_text"),
@@ -243,6 +249,10 @@ async def apply_to_job(
             match_explanation=final_state.get("match_explanation"),
             matched_skills=final_state.get("matching_skills"),
             missing_skills=final_state.get("missing_skills"),
+            change_classifications=authenticity["change_classifications"],
+            resume_diff=authenticity["resume_diff"],
+            authenticity_flags=authenticity["authenticity_flags"],
+            authenticity_requires_review=authenticity["requires_review"],
         )
 
         if final_state.get("resume_path"):
@@ -260,6 +270,24 @@ async def apply_to_job(
                 event_type=ApplicationEventType.COVER_LETTER_GENERATED,
                 status=ApplicationStatus.PENDING,
                 message="Cover letter generated.",
+            )
+
+        if authenticity["requires_review"]:
+            record_application_event(
+                db, app,
+                event_type=ApplicationEventType.STATUS_CHANGED,
+                status=ApplicationStatus.PENDING,
+                message="Authenticity guardrails flagged resume claims for review.",
+                metadata={
+                    "flag_count": len(authenticity["authenticity_flags"]),
+                    "review_item_count": len(
+                        [
+                            item
+                            for item in authenticity["change_classifications"]
+                            if item.get("requires_review")
+                        ]
+                    ),
+                },
             )
 
         # Determine final status for prepare-first mode

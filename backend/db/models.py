@@ -71,6 +71,10 @@ class ApplicationArtifact(SQLModel, table=True):
     matched_skills_json: str = Field(default="[]", sa_column=Column(Text))
     missing_skills_json: str = Field(default="[]", sa_column=Column(Text))
     weak_skills_json: str = Field(default="[]", sa_column=Column(Text))
+    change_classifications_json: str = Field(default="[]", sa_column=Column(Text))
+    resume_diff_json: str = Field(default="[]", sa_column=Column(Text))
+    authenticity_flags_json: str = Field(default="[]", sa_column=Column(Text))
+    authenticity_requires_review: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

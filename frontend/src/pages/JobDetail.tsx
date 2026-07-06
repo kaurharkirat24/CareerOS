@@ -53,6 +53,35 @@ interface Artifact {
   matched_skills: string[];
   missing_skills: string[];
   weak_skills: string[];
+  change_classifications: ChangeClassification[];
+  resume_diff: ResumeDiffEntry[];
+  authenticity_flags: AuthenticityFlag[];
+  authenticity_requires_review: boolean;
+}
+
+interface ChangeClassification {
+  path: string;
+  change_type: string;
+  generated_text: string;
+  source_text: string | null;
+  similarity: number;
+  token_overlap: number;
+  requires_review: boolean;
+}
+
+interface ResumeDiffEntry {
+  path: string;
+  change_type: string;
+  before: string | null;
+  after: string;
+}
+
+interface AuthenticityFlag {
+  path: string;
+  text: string;
+  reason: string;
+  severity: string;
+  requires_review: boolean;
 }
 
 interface TimelineEvent {
@@ -138,7 +167,7 @@ export default function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const [data, setData] = useState<DetailPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [artifactTab, setArtifactTab] = useState<'resume' | 'cover_letter'>('resume');
+  const [artifactTab, setArtifactTab] = useState<'resume' | 'cover_letter' | 'diff' | 'guardrails'>('resume');
   const [statusValue, setStatusValue] = useState('');
   const [statusNote, setStatusNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -353,12 +382,27 @@ export default function JobDetailPage() {
           {artifact && (artifact.tailored_resume_text || artifact.cover_letter_text) && (
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass section-card">
               <div className="section-card-header">
+                <h2><AlertTriangle size={18} className="section-icon" /> Review Artifacts</h2>
+                {artifact.authenticity_requires_review && (
+                  <p>
+                    Some generated resume claims need your review before submission.
+                  </p>
+                )}
                 <div className="tab-bar">
                   <button className={`tab-btn ${artifactTab === 'resume' ? 'active' : ''}`} onClick={() => setArtifactTab('resume')}>
                     Tailored Resume
                   </button>
                   <button className={`tab-btn ${artifactTab === 'cover_letter' ? 'active' : ''}`} onClick={() => setArtifactTab('cover_letter')}>
                     Cover Letter
+                  </button>
+                  <button className={`tab-btn ${artifactTab === 'diff' ? 'active' : ''}`} onClick={() => setArtifactTab('diff')}>
+                    Resume Diff
+                  </button>
+                  <button className={`tab-btn ${artifactTab === 'guardrails' ? 'active' : ''}`} onClick={() => setArtifactTab('guardrails')}>
+                    Guardrails
+                    {artifact.authenticity_flags.length > 0 && (
+                      <span className="tab-count">{artifact.authenticity_flags.length}</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -370,13 +414,75 @@ export default function JobDetailPage() {
                       <pre className="artifact-text">{artifact.tailored_resume_text}</pre>
                     </div>
                   ) : <p className="text-muted" style={{ fontSize: '0.85rem' }}>No tailored resume generated yet.</p>
-                ) : (
+                ) : artifactTab === 'cover_letter' ? (
                   artifact.cover_letter_text ? (
                     <div className="artifact-content">
                       <div className="artifact-actions"><CopyButton text={artifact.cover_letter_text} /></div>
                       <pre className="artifact-text">{artifact.cover_letter_text}</pre>
                     </div>
                   ) : <p className="text-muted" style={{ fontSize: '0.85rem' }}>No cover letter generated yet.</p>
+                ) : artifactTab === 'diff' ? (
+                  artifact.resume_diff.length > 0 ? (
+                    <div className="review-list">
+                      {artifact.resume_diff.map((entry, index) => (
+                        <div key={`${entry.path}-${index}`} className="review-item">
+                          <div className="review-item-header">
+                            <span>{entry.path}</span>
+                            <span className="review-chip">{entry.change_type}</span>
+                          </div>
+                          {entry.before && (
+                            <div className="diff-block diff-before">
+                              <span>Before</span>
+                              <p>{entry.before}</p>
+                            </div>
+                          )}
+                          <div className="diff-block diff-after">
+                            <span>After</span>
+                            <p>{entry.after}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>No meaningful resume differences were detected.</p>
+                  )
+                ) : (
+                  <div className="review-list">
+                    {artifact.authenticity_flags.length > 0 && (
+                      <div className="guardrail-alert">
+                        <AlertTriangle size={16} />
+                        <span>{artifact.authenticity_flags.length} high-risk claim{artifact.authenticity_flags.length === 1 ? '' : 's'} need review.</span>
+                      </div>
+                    )}
+                    {artifact.change_classifications.length === 0 ? (
+                      <p className="text-muted" style={{ fontSize: '0.85rem' }}>No authenticity analysis is available yet.</p>
+                    ) : (
+                      artifact.change_classifications.slice(0, 40).map((item, index) => (
+                        <div key={`${item.path}-${index}`} className={`review-item ${item.requires_review ? 'needs-review' : ''}`}>
+                          <div className="review-item-header">
+                            <span>{item.path}</span>
+                            <span className={`review-chip ${item.requires_review ? 'warning' : 'safe'}`}>
+                              {item.change_type}
+                            </span>
+                          </div>
+                          <p>{item.generated_text}</p>
+                          {item.source_text && (
+                            <small>Closest source: {item.source_text}</small>
+                          )}
+                        </div>
+                      ))
+                    )}
+                    {artifact.authenticity_flags.map((flag, index) => (
+                      <div key={`${flag.path}-${index}`} className="review-item high-risk">
+                        <div className="review-item-header">
+                          <span>{flag.path}</span>
+                          <span className="review-chip danger">{flag.severity}</span>
+                        </div>
+                        <p>{flag.text}</p>
+                        <small>{flag.reason}</small>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </motion.div>

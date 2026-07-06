@@ -68,6 +68,10 @@ def _serialize_artifact(artifact: ApplicationArtifact | None) -> dict | None:
         "matched_skills": _parse_json_list(artifact.matched_skills_json),
         "missing_skills": _parse_json_list(artifact.missing_skills_json),
         "weak_skills": _parse_json_list(artifact.weak_skills_json),
+        "change_classifications": _parse_json_list(artifact.change_classifications_json),
+        "resume_diff": _parse_json_list(artifact.resume_diff_json),
+        "authenticity_flags": _parse_json_list(artifact.authenticity_flags_json),
+        "authenticity_requires_review": artifact.authenticity_requires_review,
         "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
         "updated_at": artifact.updated_at.isoformat() if artifact.updated_at else None,
     }

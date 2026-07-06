@@ -112,6 +112,10 @@ def upsert_application_artifact(
     matched_skills: list[str] | None = None,
     missing_skills: list[str] | None = None,
     weak_skills: list[str] | None = None,
+    change_classifications: list[dict[str, Any]] | None = None,
+    resume_diff: list[dict[str, Any]] | None = None,
+    authenticity_flags: list[dict[str, Any]] | None = None,
+    authenticity_requires_review: bool | None = None,
     commit: bool = True,
 ) -> ApplicationArtifact:
     if application.id is None:
@@ -137,6 +141,14 @@ def upsert_application_artifact(
         artifact.missing_skills_json = _json_dumps(missing_skills)
     if weak_skills is not None:
         artifact.weak_skills_json = _json_dumps(weak_skills)
+    if change_classifications is not None:
+        artifact.change_classifications_json = _json_dumps(change_classifications)
+    if resume_diff is not None:
+        artifact.resume_diff_json = _json_dumps(resume_diff)
+    if authenticity_flags is not None:
+        artifact.authenticity_flags_json = _json_dumps(authenticity_flags)
+    if authenticity_requires_review is not None:
+        artifact.authenticity_requires_review = authenticity_requires_review
 
     artifact.updated_at = datetime.utcnow()
     db.add(artifact)
