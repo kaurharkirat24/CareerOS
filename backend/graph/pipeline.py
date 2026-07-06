@@ -16,6 +16,7 @@ class JobApplicationState(TypedDict):
     job_description: str
     company: str
     role_title: str
+    auto_submit: bool  # If False, stops after prepare. If True, runs full pipeline.
     
     # Agent Outcomes
     match_score: Optional[int]
@@ -82,7 +83,7 @@ async def apply_node(state: JobApplicationState):
         github=state["user_data"].get("github")
     )
     
-    success = await app_agent.apply(state["job_url"], app_data)
+    success = await app_agent.apply(state["job_url"], app_data, submit=state.get("auto_submit") is True)
     
     return {
         "application_success": success
@@ -93,6 +94,13 @@ def check_match_score(state: JobApplicationState):
     if state.get("should_apply") is True:
         return "prepare"
     return END
+
+def check_auto_submit(state: JobApplicationState):
+    """After prepare, only proceed to apply if auto_submit is True."""
+    if state.get("auto_submit") is True:
+        return "apply"
+    return END
+
 
 # Build the LangGraph Workflow
 workflow = StateGraph(JobApplicationState)
@@ -112,7 +120,15 @@ workflow.add_conditional_edges(
     }
 )
 
-workflow.add_edge("prepare", "apply")
+workflow.add_conditional_edges(
+    "prepare",
+    check_auto_submit,
+    {
+        "apply": "apply",
+        END: END,
+    }
+)
+
 workflow.add_edge("apply", END)
 
 application_pipeline = workflow.compile()
