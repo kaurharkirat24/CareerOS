@@ -1391,3 +1391,136 @@ select option {
 .diff-after {
   background: rgba(16, 185, 129, 0.07);
 }
+
+/* ═══════════ RESUME UPLOAD ═══════════ */
+
+.upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: 2px dashed rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background: rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s var(--ease-smooth);
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.upload-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.upload-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.extracted-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+/* ═══════════ PARSED PROFILE ═══════════ */
+
+.profile-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16px;
+}
+
+.profile-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.profile-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-indigo);
+  margin-bottom: 12px;
+}
+
+.profile-section-text {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.profile-item {
+  margin-bottom: 16px;
+}
+
+.profile-item:last-child {
+  margin-bottom: 0;
+}
+
+.profile-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.profile-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.profile-item-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 6px;
+}
+
+.profile-bullets {
+  list-style: disc;
+  padding-left: 18px;
+  margin: 0;
+}
+
+.profile-bullets li {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.profile-link {
+  font-size: 0.8rem;
+  color: var(--accent-indigo);
+  word-break: break-all;
+  transition: color 0.2s;
+}
+
+.profile-link:hover {
+  color: var(--accent-violet);
+}
+

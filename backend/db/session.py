@@ -23,6 +23,11 @@ APPLICATION_ARTIFACT_COLUMN_MIGRATIONS = {
     "authenticity_requires_review": "BOOLEAN DEFAULT 0",
 }
 
+USER_COLUMN_MIGRATIONS = {
+    "resume_file_path": "VARCHAR",
+    "parsed_profile_json": "TEXT",
+}
+
 def _add_missing_columns(table_name: str, columns: dict[str, str]):
     inspector = inspect(engine)
     if table_name not in inspector.get_table_names():
@@ -47,6 +52,7 @@ def _add_missing_columns(table_name: str, columns: dict[str, str]):
 def migrate_sqlite_schema():
     _add_missing_columns("application", APPLICATION_COLUMN_MIGRATIONS)
     _add_missing_columns("applicationartifact", APPLICATION_ARTIFACT_COLUMN_MIGRATIONS)
+    _add_missing_columns("user", USER_COLUMN_MIGRATIONS)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)

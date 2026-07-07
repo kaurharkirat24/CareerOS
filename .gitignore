@@ -62,3 +62,5 @@ Thumbs.db
 *.swo
 
 logs/
+uploaded_resumes/
+generated_resumes/

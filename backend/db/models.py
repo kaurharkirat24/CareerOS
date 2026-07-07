@@ -7,7 +7,8 @@ class UserBase(SQLModel):
     email: str = Field(unique=True, index=True)
     full_name: Optional[str] = None
     resume_text: Optional[str] = None
-    # Add other profile fields (skills, experience, etc.) as needed later, perhaps as JSON
+    resume_file_path: Optional[str] = None
+    parsed_profile_json: Optional[str] = Field(default=None, sa_column=Column(Text))
 
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
